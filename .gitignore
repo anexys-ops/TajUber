@@ -1,0 +1,16 @@
+node_modules
+dist
+.next
+.turbo
+.env
+.env.local
+deploy/env.prod
+deploy/keys/gh-actions-deploy
+*.log
+.DS_Store
+coverage
+.idea
+.vscode
+expo-env.d.ts
+apps/mobile/.expo
+apps/mobile/dist

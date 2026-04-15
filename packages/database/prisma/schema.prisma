@@ -1,0 +1,247 @@
+// Schéma multi-tenant : chaque restaurant = Tenant
+// Paiements clients : Stripe Connect (compte connecté = le restaurant)
+// Revenus plateforme : abonnement (Stripe Billing sur compte plateforme) + commission (application_fee sur paiements)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TenantSubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum UserTenantRole {
+  PLATFORM_OWNER
+  TENANT_ADMIN
+  STAFF_POS
+  KITCHEN
+  DRIVER
+  CUSTOMER
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING_PAYMENT
+  PAID
+  IN_KITCHEN
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELED
+}
+
+enum FulfillmentType {
+  DELIVERY
+  PICKUP
+}
+
+/// Moyen d’encaissement enregistré sur la commande (stats caisse / Uber-like).
+enum OrderPaymentMethod {
+  STRIPE
+  CASH
+  MEAL_VOUCHER
+  QONTO
+  OTHER
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // White-label (apps mobiles / branding)
+  brandName     String?
+  primaryColor  String? // hex
+  logoUrl       String?
+
+  // Stripe Connect : l’argent des commandes va sur ce compte (restaurant encaisse)
+  stripeConnectAccountId            String? @unique
+  stripeConnectChargesEnabled       Boolean @default(false)
+  stripeConnectPayoutsEnabled       Boolean @default(false)
+  stripeConnectDetailsSubmitted     Boolean @default(false)
+
+  // Commission plateforme (pourcentage sur chaque paiement, ex. 0.05 = 5 %)
+  platformFeePercent Decimal @default("0.05") @db.Decimal(5, 4)
+
+  // Abonnement mensuel à la plateforme (facturé au restaurant, compte Stripe plateforme)
+  subscriptionStatus     TenantSubscriptionStatus @default(TRIAL)
+  stripeBillingCustomerId String?  @unique
+  stripeSubscriptionId    String?  @unique
+  subscriptionPlanId      String?
+
+  // Fiche restaurant & paramètres (BO)
+  restaurantStreet       String?
+  restaurantCity         String?
+  restaurantPostalCode   String?
+  restaurantCountry      String?  @default("FR")
+  restaurantPhone        String?
+  restaurantEmail        String?
+  restaurantDescription  String?
+  /// JSON : { "mon": { "open": "11:30", "close": "22:00", "closed": false }, ... }
+  openingHoursJson       String?
+  deliveryEnabled        Boolean  @default(true)
+  pickupEnabled          Boolean  @default(true)
+  paymentsStripeEnabled  Boolean  @default(true)
+  paymentsCashEnabled    Boolean  @default(true)
+  paymentsQontoEnabled   Boolean  @default(false)
+  paymentsMealVoucherEnabled Boolean @default(false)
+  qontoPaymentNote       String?
+  mealVoucherNote        String?
+
+  memberships UserTenant[]
+  menuItems   MenuItem[]
+  promotions  Promotion[]
+  orders      Order[]
+  orderEvents OrderEvent[]
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String?
+  displayName     String?
+  isPlatformOwner Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  memberships UserTenant[]
+}
+
+model UserTenant {
+  id        String         @id @default(cuid())
+  userId    String
+  tenantId  String
+  role      UserTenantRole
+  createdAt DateTime       @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  tenantId    String
+  category    String? // ex. Plats, Accompagnements, Boissons, Desserts
+  name        String
+  description String?
+  priceCents  Int
+  photoUrl    String?
+  isAvailable Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Promotion {
+  id          String    @id @default(cuid())
+  tenantId    String
+  title       String
+  description String?
+  percentOff  Decimal?  @db.Decimal(5, 2)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+model Order {
+  id                    String      @id @default(cuid())
+  tenantId              String
+  status                OrderStatus @default(DRAFT)
+  customerName          String?
+  customerPhone         String?
+  fulfillmentType       FulfillmentType @default(PICKUP)
+  deliveryAddress       String?
+  deliveryInstructions  String?
+  deliveryCity          String?
+  deliveryPostalCode    String?
+  /// Canal : pos, web, mobile_app
+  orderSource           String      @default("pos")
+  paymentMethod         OrderPaymentMethod?
+  totalCents            Int         @default(0)
+  currency              String      @default("eur")
+  // Paiement : PaymentIntent sur le compte connecté avec application_fee
+  stripePaymentIntentId String?     @unique
+  stripeChargeId        String?
+  platformFeeCents      Int?
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  items   OrderItem[]
+  events  OrderEvent[]
+
+  @@index([tenantId])
+  @@index([status])
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  tenantId  String
+  orderId   String
+  status    OrderStatus
+  source    String? // caisse, kitchen, driver, webhook, system
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([orderId])
+}
+
+model StripeWebhookEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
+}
+
+model OrderItem {
+  id         String @id @default(cuid())
+  orderId    String
+  menuItemId String?
+  name       String
+  quantity   Int    @default(1)
+  unitCents  Int
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+// Plans d’abonnement vendus par la plateforme (prix en centimes / mois)
+model PlatformSubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  priceCents  Int
+  currency    String   @default("eur")
+  stripePriceId String? @unique
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

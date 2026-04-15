@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "TAJ Cuisine",
+    "slug": "taj-kitchen",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "tajkitchen",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tajplatform.kitchen"
+    },
+    "android": {
+      "package": "com.tajplatform.kitchen",
+      "adaptiveIcon": {
+        "backgroundColor": "#14532d"
+      }
+    },
+    "plugins": ["expo-router"],
+    "extra": {
+      "tenantSlug": "taj-poulet-demo",
+      "apiUrl": "http://localhost:3001",
+      "appRole": "kitchen"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "TAJ Livreur",
+    "slug": "taj-driver",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "scheme": "tajdriver",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tajplatform.driver"
+    },
+    "android": {
+      "package": "com.tajplatform.driver",
+      "adaptiveIcon": {
+        "backgroundColor": "#1e3a8a"
+      }
+    },
+    "plugins": ["expo-router"],
+    "extra": {
+      "tenantSlug": "taj-poulet-demo",
+      "apiUrl": "http://localhost:3001",
+      "appRole": "driver"
+    }
+  }
+}
