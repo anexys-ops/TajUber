@@ -40,6 +40,7 @@ RSYNC=(rsync -avz
   --exclude "**/dist"
   --exclude .turbo
   --exclude deploy/env.prod
+  --exclude deploy/keys/gh-actions-deploy
   --exclude "*.log"
 )
 
