@@ -8,8 +8,43 @@
 
 ## Prérequis sur le VPS
 
-- Docker **et** Docker Compose plugin (`docker compose`).
-- Si vous êtes dans un **LXC / conteneur** (« container 166 »), vérifiez que Docker est autorisé (nesting / privilèges) ou installez la stack sur l’hôte.
+- Docker **et** Docker Compose plugin (`docker compose`) sur la **machine qui héberge Taj** (VM ou **CT LXC dédié**), **pas** sur l’hyperviseur Proxmox.
+- Sous **Proxmox** : **n’installez jamais Docker sur le nœud (host)** `rack-58` / `pve`. L’UI et l’API deviennent lentes ou « offline » si l’hôte est saturé (`docker compose build`, agents, etc.). Prometheus, Taj, etc. vont dans des **CT/VM** (ex. CT **119** pour Prometheus seulement).
+
+### Retirer Docker de l’hôte Proxmox (à exécuter **sur le nœud PVE**, en root)
+
+1. Arrêter tout ce qui tourne encore :
+
+```bash
+systemctl stop docker docker.socket docker containerd 2>/dev/null || true
+# Si une session a laissé un build en cours, tuer les processus restants :
+pkill -f 'docker compose' 2>/dev/null || true
+pkill -f docker-buildx 2>/dev/null || true
+```
+
+2. Désactiver les services au boot :
+
+```bash
+systemctl disable docker.socket docker containerd 2>/dev/null || true
+```
+
+3. Désinstaller les paquets Docker (noms courants ; adaptez selon `dpkg -l | grep -i docker`) :
+
+```bash
+apt-get update
+apt-get purge -y 'docker-ce*' 'docker-ce-cli*' 'containerd.io' 'docker-buildx-plugin' 'docker-compose-plugin' 'docker.io' 'moby-*' 2>/dev/null || true
+apt-get autoremove -y --purge
+```
+
+4. (Optionnel, destructif) supprimer les données locales des images :
+
+```bash
+rm -rf /var/lib/docker /var/lib/containerd
+```
+
+5. Vérifier : `command -v docker` ne doit rien afficher ; `systemctl status docker` → **not found** ou **inactive**.
+
+**Taj** : déployer uniquement vers la **VM ou le CT** prévu (ex. IP interne `192.168.x.x`), via `./deploy/deploy-to-prod.sh` avec `DEPLOY_HOST` = cette machine, **pas** l’IP du nœud Proxmox.
 
 ## DNS
 
