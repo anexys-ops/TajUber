@@ -8,8 +8,10 @@ COPY version.txt ./version.txt
 COPY packages ./packages
 COPY apps/api ./apps/api
 RUN pnpm install --frozen-lockfile
-# Types + PrismaClient exposés par @taj/database (package.json → dist/) — obligatoire avant nest build
-RUN pnpm --filter @taj/database run build
+# Client Prisma + compilation du paquet (dist/ pour le runtime Node)
+RUN pnpm --filter @taj/database run build \
+  && test -f packages/database/dist/index.js \
+  && test -f packages/database/dist/index.d.ts
 RUN pnpm --filter @taj/api run build
 
 FROM node:20-bookworm-slim
