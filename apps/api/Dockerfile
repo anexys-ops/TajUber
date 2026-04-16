@@ -1,5 +1,6 @@
 # docker build -f apps/api/Dockerfile .
 FROM node:20-bookworm-slim AS deps
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 ENV NODE_OPTIONS="--max-old-space-size=6144"
