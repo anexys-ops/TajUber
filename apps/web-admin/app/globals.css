@@ -23,6 +23,38 @@ body {
   min-height: 100%;
 }
 
+.app-body-stack {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-body-main {
+  flex: 1 0 auto;
+}
+
+.app-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.8rem;
+  color: #8b98a5;
+  background: #0a0e14;
+  border-top: 1px solid #2d3a4d;
+  text-align: center;
+}
+
+.app-footer-sep {
+  margin: 0 0.35rem;
+  opacity: 0.7;
+}
+
+.app-footer-version {
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
 a {
   color: var(--accent);
 }
@@ -31,6 +63,98 @@ main {
   max-width: 56rem;
   margin: 0 auto;
   padding: 2rem 1.5rem;
+}
+
+.portal-hero {
+  margin-bottom: 2rem;
+}
+
+.portal-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #8b98a5;
+}
+
+.portal-hero h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+}
+
+.portal-lead {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #c8d0d8;
+  max-width: 40rem;
+}
+
+.portal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.portal-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-decoration: none;
+  color: inherit;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 1.35rem 1.35rem 1.15rem;
+  border: 1px solid #2d3a4d;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.portal-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.portal-card h2 {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.2rem;
+}
+
+.portal-card p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #8b98a5;
+  flex: 1;
+}
+
+.portal-card-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--accent);
+}
+
+.portal-card--pos .portal-card-icon {
+  letter-spacing: 0.05em;
+}
+
+.portal-card-cta {
+  margin-top: 1.1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--accent);
+}
+
+.portal-secondary .portal-links {
+  margin: 0.5rem 0 0;
+  padding-left: 1.15rem;
+  line-height: 1.7;
+}
+
+.portal-secondary .portal-links a {
+  font-weight: 600;
 }
 
 .card {

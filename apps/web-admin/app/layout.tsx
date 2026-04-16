@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { AppFooter } from "../components/AppFooter";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Taj Platform — Back-office",
-  description: "Menus, promotions et paramètres par restaurant",
+  title: "Taj Platform — Portail",
+  description:
+    "Back-office restaurant, caisse commandes et cuisine sur le même domaine",
 };
 
 export default function RootLayout({
@@ -13,8 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body>
-        {children}
+      <body className="app-body-stack">
+        <div className="app-body-main">{children}</div>
+        <AppFooter />
       </body>
     </html>
   );

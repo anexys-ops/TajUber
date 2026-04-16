@@ -31,6 +31,10 @@ jobs:
           : "${DEPLOY_USER:?Secret DEPLOY_USER manquant}"
           : "${DEPLOY_ENV:?Secret DEPLOY_ENV manquant (contenu multiligne de deploy/env.prod)}"
 
+          bash scripts/bump-app-version.sh
+          APP_VERSION=$(tr -d ' \r\n' < version.txt)
+          echo "Version déployée: ${APP_VERSION}"
+
           PORT="${DEPLOY_PORT:-166}"
           REMOTE_DIR="${DEPLOY_REMOTE_DIR:-/opt/taj-platform}"
 
@@ -60,7 +64,7 @@ jobs:
             "umask 077; mkdir -p ${RDIR}/deploy; cat > ${RDIR}/deploy/env.prod"
 
           "${SSH[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
-            "set -euo pipefail; cd ${RDIR}; \
+            "set -euo pipefail; cd ${RDIR}; export APP_VERSION='${APP_VERSION}'; \
             docker compose -f docker-compose.prod.yml --env-file deploy/env.prod build; \
             docker compose -f docker-compose.prod.yml --env-file deploy/env.prod up -d; \
             docker compose -f docker-compose.prod.yml --env-file deploy/env.prod ps"

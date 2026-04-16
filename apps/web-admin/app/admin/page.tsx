@@ -2,16 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { getApiBase, getWebPosUrl } from "../../lib/siteUrls";
 import { AdminDriversTab } from "./AdminDriversTab";
 import { AdminMenuCrud } from "./AdminMenuCrud";
 import { AdminPromosCrud } from "./AdminPromosCrud";
 import { AdminRestaurantTab } from "./AdminRestaurantTab";
 import { AdminSalesTab } from "./AdminSalesTab";
 
-const apiBase =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
-const posUrl =
-  process.env.NEXT_PUBLIC_WEB_POS_URL ?? "http://localhost:3041";
+const apiBase = getApiBase();
+const posUrl = getWebPosUrl();
 
 const TOKEN_KEY = "taj_admin_jwt";
 const SLUG_KEY = "taj_tenant_slug";
@@ -175,9 +174,7 @@ export default function AdminConsolePage() {
             {" · "}
             <Link href="/kitchen">cuisine</Link>
             {" · "}
-            <a href={posUrl} target="_blank" rel="noreferrer">
-              caisse
-            </a>
+            <a href={posUrl}>commandes (caisse)</a>
           </p>
         </div>
         {token && (

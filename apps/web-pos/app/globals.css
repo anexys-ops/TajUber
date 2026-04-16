@@ -19,6 +19,38 @@ body {
   min-height: 100%;
 }
 
+.app-body-stack {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-body-main {
+  flex: 1 0 auto;
+}
+
+.app-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: #082f49;
+  border-top: 1px solid #0c4a6e;
+  text-align: center;
+}
+
+.app-footer-sep {
+  margin: 0 0.35rem;
+  opacity: 0.7;
+}
+
+.app-footer-version {
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
 .pos-layout {
   max-width: 1400px;
   margin: 0 auto;

@@ -4,6 +4,7 @@ import { Controller, Get } from "@nestjs/common";
 export class HealthController {
   @Get()
   getHealth() {
-    return { ok: true, service: "taj-api" };
+    const version = process.env.APP_VERSION?.trim() || "dev";
+    return { ok: true, service: "taj-api", version };
   }
 }

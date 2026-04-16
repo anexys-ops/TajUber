@@ -23,14 +23,11 @@ DEPLOY_USER="${DEPLOY_USER:-root}"
 REMOTE_DIR="${REMOTE_DIR:-/opt/taj-platform}"
 
 # Mot de passe SSH (optionnel) : export SSHPASS='…' — préférez une clé SSH.
+SSH=(ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new)
+SCP=(scp -P "$SSH_PORT" -o StrictHostKeyChecking=accept-new)
 if [[ -n "${SSHPASS:-}" ]] && command -v sshpass >/dev/null 2>&1; then
-  _SSHP=(sshpass -e)
-else
-  _SSHP=()
-fi
-
-SSH=("${_SSHP[@]}" ssh -p "$SSH_PORT" -o StrictHostKeyChecking=accept-new)
-if [[ -n "${SSHPASS:-}" ]] && command -v sshpass >/dev/null 2>&1; then
+  SSH=(sshpass -e "${SSH[@]}")
+  SCP=(sshpass -e "${SCP[@]}")
   RSYNC_SSH="sshpass -e ssh -p $SSH_PORT -o StrictHostKeyChecking=accept-new"
 else
   RSYNC_SSH="ssh -p $SSH_PORT -o StrictHostKeyChecking=accept-new"
@@ -51,26 +48,40 @@ if [[ ! -f deploy/env.prod ]]; then
   exit 1
 fi
 
+if [[ "${DEPLOY_SKIP_VERSION_BUMP:-}" != "1" ]]; then
+  echo "→ Bump version (semver patch dans version.txt)"
+  bash "$ROOT/scripts/bump-app-version.sh"
+else
+  echo "→ Bump version ignoré (DEPLOY_SKIP_VERSION_BUMP=1)"
+fi
+APP_VERSION=$(tr -d ' \r\n' <"$ROOT/version.txt")
+echo "→ Version déployée : ${APP_VERSION}"
+
 echo "→ Sync vers ${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}"
 "${RSYNC[@]}" ./ "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/"
 
 echo "→ Copie des secrets (env.prod)"
-"${_SSHP[@]}" scp -P "$SSH_PORT" -o StrictHostKeyChecking=accept-new \
+"${SCP[@]}" \
   deploy/env.prod "${DEPLOY_USER}@${DEPLOY_HOST}:${REMOTE_DIR}/deploy/env.prod"
 
-REMOTE_BUILD="build"
+NO_CACHE_FLAG="0"
 if [[ "${DEPLOY_NO_CACHE:-}" == "1" ]]; then
-  REMOTE_BUILD="build --no-cache"
+  NO_CACHE_FLAG="1"
 fi
 
 echo "→ Build & up (Docker)"
-# bash -s + heredoc : expansion locale des chemins / flags (pas de bash -c vide)
-"${SSH[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s <<EOF
-set -e
-cd "$(printf '%s' "$REMOTE_DIR")"
-docker compose -f docker-compose.prod.yml --env-file deploy/env.prod $REMOTE_BUILD
+"${SSH[@]}" "${DEPLOY_USER}@${DEPLOY_HOST}" bash -s \
+  "$REMOTE_DIR" "$APP_VERSION" "$NO_CACHE_FLAG" <<'REMOTE_EOF'
+set -euo pipefail
+cd "$1"
+export APP_VERSION="$2"
+if [[ "$3" == "1" ]]; then
+  docker compose -f docker-compose.prod.yml --env-file deploy/env.prod build --no-cache
+else
+  docker compose -f docker-compose.prod.yml --env-file deploy/env.prod build
+fi
 docker compose -f docker-compose.prod.yml --env-file deploy/env.prod up -d
 docker compose -f docker-compose.prod.yml --env-file deploy/env.prod ps
-EOF
+REMOTE_EOF
 
 echo "→ Terminé. Vérifiez : curl -sS http://taj.apps-dev.fr/api/health (ou votre domaine)"

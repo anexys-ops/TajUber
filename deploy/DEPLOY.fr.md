@@ -15,6 +15,12 @@
 
 Enregistrement **A** : `taj.apps-dev.fr` → IP publique du VPS (`86.104.252.67` ou la vôtre).
 
+## Version déployée
+
+- **`version.txt`** (racine du dépôt, semver `M.m.p`) pilote l’affichage : **pied de page** des apps **web-admin** et **web-pos**, et le champ **`version`** dans **`GET /api/health`** (via `APP_VERSION` au moment du `docker compose build`).
+- **`deploy/deploy-to-prod.sh`** et **`.github/workflows/deploy.yml`** exécutent **`scripts/bump-app-version.sh`** avant `rsync` (incrément **patch**). Pour déployer sans changer le numéro : `DEPLOY_SKIP_VERSION_BUMP=1 ./deploy/deploy-to-prod.sh`.
+- Règle d’équipe / agent : **`.cursor/rules/taj-deploy-version.mdc`**. Après un déploiement manuel, vous pouvez **commiter `version.txt`** pour garder l’historique Git aligné avec la prod.
+
 ## Déploiement via GitHub Actions
 
 Sur chaque `push` sur la branche **`main`** (et via **Actions → Deploy production → Run workflow**), le workflow `.github/workflows/deploy.yml` synchronise le dépôt vers le VPS puis exécute `docker compose build` et `up -d`.
@@ -92,7 +98,7 @@ docker compose -f docker-compose.prod.yml --env-file deploy/env.prod exec api \
 
 ### 4. Vérifications
 
-- `http://taj.apps-dev.fr/health` → via Nginx : `http://taj.apps-dev.fr/api/health`
+- `http://taj.apps-dev.fr/api/health` — JSON avec `ok`, `service`, **`version`** (doit correspondre au footer des pages web après rebuild).
 - Back-office : `http://taj.apps-dev.fr/`
 - Caisse : `http://taj.apps-dev.fr/pos/`
 
@@ -120,7 +126,7 @@ Puis ajoutez un bloc `listen 443 ssl` dans Nginx en montant `letsencrypt_certs`,
 | API      | `https://taj.apps-dev.fr/api/...`     |
 | Admin    | `https://taj.apps-dev.fr/admin`       |
 | Cuisine  | `https://taj.apps-dev.fr/kitchen`     |
-| Caisse   | `https://taj.apps-dev.fr/pos/`       |
+| Caisse   | `https://taj.apps-dev.fr/pos/` (alias `https://taj.apps-dev.fr/commandes`) |
 | Webhooks | `https://taj.apps-dev.fr/stripe/webhook` |
 
 ## Mise à jour
@@ -130,3 +136,8 @@ cd /opt/taj-platform
 git pull   # ou nouveau rsync
 docker compose -f docker-compose.prod.yml --env-file deploy/env.prod up -d --build
 ```
+
+## Builds Docker lents ou instables
+
+- Les images activent **`NODE_OPTIONS=--max-old-space-size=6144`** pendant `pnpm install` / build pour limiter les plantages mémoire sur de gros bundles Next.
+- Le fichier **`.npmrc`** à la racine augmente les timeouts / retries des téléchargements npm (utile si le réseau du VPS est capricieux).

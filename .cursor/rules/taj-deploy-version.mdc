@@ -1,0 +1,12 @@
+---
+description: Bump obligatoire de version.txt à chaque déploiement production Taj
+alwaysApply: true
+---
+
+# Version applicative et déploiements (TajUber)
+
+- La version affichée (footers Next, champ `version` de `GET /health`) provient de **`version.txt`** à la racine (semver `M.m.p`) et de la variable **`APP_VERSION`** au build Docker.
+- **À chaque déploiement production** (script `deploy/deploy-to-prod.sh`, workflow `.github/workflows/deploy.yml`, ou toute autre procédure de mise en ligne), il faut **incrémenter le patch** dans `version.txt` **avant** le build des images, sauf intention explicite de ne pas le faire.
+- Utiliser le script idempotent : `bash scripts/bump-app-version.sh` (affiche la nouvelle version). En local, pour un déploiement sans bump : `DEPLOY_SKIP_VERSION_BUMP=1 ./deploy/deploy-to-prod.sh`.
+- Après un déploiement manuel hors CI, **commiter et pousser `version.txt`** sur `main` si l’équipe suit le compteur dans Git.
+- Ne pas mettre de valeur fixe obsolète de `APP_VERSION` dans `deploy/env.prod` : elle pourrait écraser la variable exportée au moment du `docker compose` ; laisser la chaîne de déploiement définir `APP_VERSION` depuis `version.txt`.
