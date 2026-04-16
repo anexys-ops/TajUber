@@ -11,8 +11,7 @@ COPY apps/api ./apps/api
 RUN pnpm install --frozen-lockfile
 # Client Prisma + compilation du paquet (dist/ pour le runtime Node)
 RUN pnpm --filter @taj/database run build \
-  && test -f packages/database/dist/index.js \
-  && test -f packages/database/dist/index.d.ts
+  && test -f packages/database/dist/index.js
 RUN pnpm --filter @taj/api run build
 
 FROM node:20-bookworm-slim

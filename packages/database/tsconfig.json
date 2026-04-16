@@ -5,7 +5,9 @@
     "rootDir": "src",
     "composite": true,
     "module": "CommonJS",
-    "moduleResolution": "Node"
+    "moduleResolution": "Node",
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src/**/*"]
 }
