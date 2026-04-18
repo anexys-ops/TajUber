@@ -6,7 +6,9 @@
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
-    "ios": "expo start --ios"
+    "ios": "expo start --ios",
+    "ios:sim": "expo start --ios --port 8084",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "react-dom": "18.3.1",

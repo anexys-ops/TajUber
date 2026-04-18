@@ -14,3 +14,10 @@ coverage
 expo-env.d.ts
 apps/mobile/.expo
 apps/mobile/dist
+# Natif Expo (prebuild) — régénérer avec `pnpm --filter @taj/mobile-driver run prebuild:android`
+apps/mobile-driver/android
+apps/mobile-driver/ios
+apps/mobile-driver/.expo
+
+# TypeScript incremental
+*.tsbuildinfo

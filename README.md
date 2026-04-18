@@ -35,9 +35,9 @@ Back-office Next : définir `TAJ_PLATFORM_TOKEN` (JWT obtenu via `POST /auth/log
 | API Nest | `pnpm --filter @taj/api dev` | 3001 |
 | Back-office | `pnpm --filter @taj/web-admin dev` | 3040 |
 | Caisse | `pnpm --filter @taj/web-pos dev` | 3041 |
-| Client Expo | `cd apps/mobile && npx expo start` | — |
-| Cuisine (KDS) | `cd apps/mobile-kitchen && npx expo start` | — |
-| Livreur | `cd apps/mobile-driver && npx expo start` | — |
+| Client Expo (Expo Go) | `cd apps/mobile && npx expo start` | — |
+| Cuisine (KDS, Expo Go) | `cd apps/mobile-kitchen && npx expo start` | — |
+| Livreur (Expo Go) | `cd apps/mobile-driver && npx expo start` | — |
 | Agent impression | `pnpm --filter @taj/print-agent run build && PRINT_AGENT_SECRET=… TENANT_SLUG=… pnpm --filter @taj/print-agent start` | — |
 
 API Docker (image monorepo) : `docker compose --profile full up -d --build`

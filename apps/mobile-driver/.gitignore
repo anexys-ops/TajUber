@@ -5,6 +5,5 @@
 expo-env.d.ts
 # @end expo-cli
 
-# Générés par `expo prebuild` / `expo run:*` (ne pas versionner tant qu’on n’a pas de workflow natif figé)
 /ios/
 /android/

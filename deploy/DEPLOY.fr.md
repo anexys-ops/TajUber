@@ -22,13 +22,13 @@ pkill -f 'docker compose' 2>/dev/null || true
 pkill -f docker-buildx 2>/dev/null || true
 ```
 
-2. Désactiver les services au boot :
+1. Désactiver les services au boot :
 
 ```bash
 systemctl disable docker.socket docker containerd 2>/dev/null || true
 ```
 
-3. Désinstaller les paquets Docker (noms courants ; adaptez selon `dpkg -l | grep -i docker`) :
+1. Désinstaller les paquets Docker (noms courants ; adaptez selon `dpkg -l | grep -i docker`) :
 
 ```bash
 apt-get update
@@ -36,13 +36,13 @@ apt-get purge -y 'docker-ce*' 'docker-ce-cli*' 'containerd.io' 'docker-buildx-pl
 apt-get autoremove -y --purge
 ```
 
-4. (Optionnel, destructif) supprimer les données locales des images :
+1. (Optionnel, destructif) supprimer les données locales des images :
 
 ```bash
 rm -rf /var/lib/docker /var/lib/containerd
 ```
 
-5. Vérifier : `command -v docker` ne doit rien afficher ; `systemctl status docker` → **not found** ou **inactive**.
+1. Vérifier : `command -v docker` ne doit rien afficher ; `systemctl status docker` → **not found** ou **inactive**.
 
 **Taj** : déployer uniquement vers la **VM ou le CT** prévu (ex. IP interne `192.168.x.x`), via `./deploy/deploy-to-prod.sh` avec `DEPLOY_HOST` = cette machine, **pas** l’IP du nœud Proxmox.
 
@@ -52,24 +52,26 @@ Enregistrement **A** : `taj.apps-dev.fr` → IP publique du VPS (`86.104.252.67`
 
 ## Version déployée
 
-- **`version.txt`** (racine du dépôt, semver `M.m.p`) pilote l’affichage : **pied de page** des apps **web-admin** et **web-pos**, et le champ **`version`** dans **`GET /api/health`** (via `APP_VERSION` au moment du `docker compose build`).
-- **`deploy/deploy-to-prod.sh`** et **`.github/workflows/deploy.yml`** exécutent **`scripts/bump-app-version.sh`** avant `rsync` (incrément **patch**). Pour déployer sans changer le numéro : `DEPLOY_SKIP_VERSION_BUMP=1 ./deploy/deploy-to-prod.sh`.
-- Règle d’équipe / agent : **`.cursor/rules/taj-deploy-version.mdc`**. Après un déploiement manuel, vous pouvez **commiter `version.txt`** pour garder l’historique Git aligné avec la prod.
+- `**version.txt`** (racine du dépôt, semver `M.m.p`) pilote l’affichage : **pied de page** des apps **web-admin** et **web-pos**, et le champ `**version`** dans `**GET /api/health**` (via `APP_VERSION` au moment du `docker compose build`).
+- `**deploy/deploy-to-prod.sh**` et `**.github/workflows/deploy.yml**` exécutent `**scripts/bump-app-version.sh**` avant `rsync` (incrément **patch**). Pour déployer sans changer le numéro : `DEPLOY_SKIP_VERSION_BUMP=1 ./deploy/deploy-to-prod.sh`.
+- Règle d’équipe / agent : `**.cursor/rules/taj-deploy-version.mdc`**. Après un déploiement manuel, vous pouvez **commiter `version.txt`** pour garder l’historique Git aligné avec la prod.
 
 ## Déploiement via GitHub Actions
 
-Sur chaque `push` sur la branche **`main`** (et via **Actions → Deploy production → Run workflow**), le workflow `.github/workflows/deploy.yml` synchronise le dépôt vers le VPS puis exécute `docker compose build` et `up -d`.
+Sur chaque `push` sur la branche `**main**` (et via **Actions → Deploy production → Run workflow**), le workflow `.github/workflows/deploy.yml` synchronise le dépôt vers le VPS puis exécute `docker compose build` et `up -d`.
 
 ### Secrets GitHub (Settings → Secrets and variables → Actions)
 
-| Secret | Description |
-|--------|-------------|
-| `DEPLOY_SSH_KEY` | Clé privée PEM (ex. `deploy/keys/gh-actions-deploy` générée en local — **ne jamais la commiter**). |
-| `DEPLOY_HOST` | IP ou hostname (ex. `86.104.252.67`). |
-| `DEPLOY_USER` | Utilisateur SSH (ex. `root`). |
-| `DEPLOY_ENV` | Contenu **multiligne** complet de `deploy/env.prod` (copier-coller depuis votre fichier local). |
-| `DEPLOY_PORT` | *(Optionnel)* Port SSH ; défaut **`166`**. |
-| `DEPLOY_REMOTE_DIR` | *(Optionnel)* Répertoire distant ; défaut **`/opt/taj-platform`**. |
+
+| Secret              | Description                                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------------- |
+| `DEPLOY_SSH_KEY`    | Clé privée PEM (ex. `deploy/keys/gh-actions-deploy` générée en local — **ne jamais la commiter**). |
+| `DEPLOY_HOST`       | IP ou hostname (ex. `86.104.252.67`).                                                              |
+| `DEPLOY_USER`       | Utilisateur SSH (ex. `root`).                                                                      |
+| `DEPLOY_ENV`        | Contenu **multiligne** complet de `deploy/env.prod` (copier-coller depuis votre fichier local).    |
+| `DEPLOY_PORT`       | *(Optionnel)* Port SSH ; défaut `**166`**.                                                         |
+| `DEPLOY_REMOTE_DIR` | *(Optionnel)* Répertoire distant ; défaut `**/opt/taj-platform*`*.                                 |
+
 
 ### Autoriser la clé sur le serveur
 
@@ -99,6 +101,24 @@ Rebuild complet sans cache Docker : `DEPLOY_NO_CACHE=1 ./deploy/deploy-to-prod.s
 
 Le script **rsync** le projet, envoie `deploy/env.prod`, puis exécute `docker compose build` et `up -d` sur le serveur.
 
+## Copie fraîche vers `WORK` sur le serveur (reprise à zéro)
+
+Pour pousser **tout le code** (sans `node_modules`, sans `.git` par défaut) vers un autre répertoire que `/opt/taj-platform` — par exemple **`/opt/WORK`** — afin de repartir sur une arborescence propre **sans** toucher à l’ancien dossier tant que vous ne basculez pas Nginx / les services :
+
+```bash
+export DEPLOY_HOST=86.104.252.67
+export SSH_PORT=166          # si besoin
+export DEPLOY_USER=root
+export REMOTE_WORK_DIR=/opt/WORK
+./deploy/sync-to-work.sh
+```
+
+- **`REMOTE_WORK_DIR`** : défaut `/opt/WORK` si non défini.
+- **`SYNC_WITH_GIT=1`** : inclut aussi le dossier `.git` (sync plus lourde).
+- **`deploy/env.prod`** n’est **pas** copié (secrets) ; sur le serveur : `cp deploy/env.prod.example deploy/env.prod` puis édition.
+
+Le script utilise **`rsync --delete`** : le contenu distant du dossier WORK devient un miroir du dépôt local (fichiers absents localement sont supprimés côté serveur dans ce dossier).
+
 ## Étapes manuelles (alternative)
 
 ### 1. Copier le projet
@@ -123,7 +143,7 @@ nano deploy/env.prod
 docker compose -f docker-compose.prod.yml --env-file deploy/env.prod up -d --build
 ```
 
-- L’API exécute **`prisma migrate deploy`** au démarrage.
+- L’API exécute `**prisma migrate deploy**` au démarrage.
 - Seed (optionnel, une fois) :
 
 ```bash
@@ -133,7 +153,7 @@ docker compose -f docker-compose.prod.yml --env-file deploy/env.prod exec api \
 
 ### 4. Vérifications
 
-- `http://taj.apps-dev.fr/api/health` — JSON avec `ok`, `service`, **`version`** (doit correspondre au footer des pages web après rebuild).
+- `http://taj.apps-dev.fr/api/health` — JSON avec `ok`, `service`, `**version**` (doit correspondre au footer des pages web après rebuild).
 - Back-office : `http://taj.apps-dev.fr/`
 - Caisse : `http://taj.apps-dev.fr/pos/`
 
@@ -156,13 +176,15 @@ Puis ajoutez un bloc `listen 443 ssl` dans Nginx en montant `letsencrypt_certs`,
 
 ## URLs récapitulatives
 
-| Service   | URL publique                          |
-|----------|----------------------------------------|
-| API      | `https://taj.apps-dev.fr/api/...`     |
-| Admin    | `https://taj.apps-dev.fr/admin`       |
-| Cuisine  | `https://taj.apps-dev.fr/kitchen`     |
+
+| Service  | URL publique                                                               |
+| -------- | -------------------------------------------------------------------------- |
+| API      | `https://taj.apps-dev.fr/api/...`                                          |
+| Admin    | `https://taj.apps-dev.fr/admin`                                            |
+| Cuisine  | `https://taj.apps-dev.fr/kitchen`                                          |
 | Caisse   | `https://taj.apps-dev.fr/pos/` (alias `https://taj.apps-dev.fr/commandes`) |
-| Webhooks | `https://taj.apps-dev.fr/stripe/webhook` |
+| Webhooks | `https://taj.apps-dev.fr/stripe/webhook`                                   |
+
 
 ## Mise à jour
 
@@ -174,5 +196,6 @@ docker compose -f docker-compose.prod.yml --env-file deploy/env.prod up -d --bui
 
 ## Builds Docker lents ou instables
 
-- Les images activent **`NODE_OPTIONS=--max-old-space-size=6144`** pendant `pnpm install` / build pour limiter les plantages mémoire sur de gros bundles Next.
-- Le fichier **`.npmrc`** à la racine augmente les timeouts / retries des téléchargements npm (utile si le réseau du VPS est capricieux).
+- Les images activent `**NODE_OPTIONS=--max-old-space-size=6144**` pendant `pnpm install` / build pour limiter les plantages mémoire sur de gros bundles Next.
+- Le fichier `**.npmrc**` à la racine augmente les timeouts / retries des téléchargements npm (utile si le réseau du VPS est capricieux).
+

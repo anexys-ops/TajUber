@@ -7,15 +7,20 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "ios:sim": "expo start --ios --port 8082",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "build:android:production": "eas build --platform android --profile production",
+    "build:android:preview-apk": "eas build --platform android --profile preview",
+    "build:ios:production": "eas build --platform ios --profile production"
   },
   "dependencies": {
-    "react-dom": "18.3.1",
     "expo": "~52.0.23",
     "expo-constants": "~17.0.3",
     "expo-router": "~4.0.14",
     "expo-status-bar": "~2.0.0",
     "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-native": "0.76.5",
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0"
@@ -23,6 +28,7 @@
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@types/react": "~18.3.12",
+    "eas-cli": "^18.7.0",
     "typescript": "^5.7.2"
   }
 }

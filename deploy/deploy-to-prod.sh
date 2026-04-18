@@ -82,6 +82,8 @@ else
   docker compose -f docker-compose.prod.yml --env-file deploy/env.prod build
 fi
 docker compose -f docker-compose.prod.yml --env-file deploy/env.prod up -d
+# Après recréation de l’API, nginx peut garder l’ancienne IP résolue pour `api` au chargement du bloc upstream.
+docker compose -f docker-compose.prod.yml --env-file deploy/env.prod restart nginx
 docker compose -f docker-compose.prod.yml --env-file deploy/env.prod ps
 REMOTE_EOF
 

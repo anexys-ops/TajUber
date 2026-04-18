@@ -32,23 +32,87 @@ body {
 .app-footer {
   flex-shrink: 0;
   margin-top: auto;
-  padding: 0.65rem 1.25rem;
+  padding: 0.75rem 1.25rem 0.85rem;
   font-size: 0.8rem;
   color: var(--muted);
   background: #082f49;
   border-top: 1px solid #0c4a6e;
+}
+
+.app-footer-inner {
+  max-width: 56rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
   text-align: center;
 }
 
+.app-footer-brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.app-footer-title {
+  font-weight: 600;
+  color: #e0f2fe;
+}
+
 .app-footer-sep {
-  margin: 0 0.35rem;
+  margin: 0 0.15rem;
   opacity: 0.7;
 }
 
-.app-footer-version {
-  font-weight: 600;
-  color: var(--accent);
+.app-footer-product {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.app-footer-version-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (min-width: 520px) {
+  .app-footer-version-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem 0.75rem;
+  }
+}
+
+.app-footer-version-badge {
+  display: inline-block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #422006;
+  background: var(--accent);
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
   font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.app-footer-version-hint {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  max-width: 36rem;
+  color: #94c5e8;
+}
+
+.app-footer-code {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.35rem;
+  background: #0c4a6e;
+  border-radius: 4px;
+  color: #e0f2fe;
 }
 
 .pos-layout {
