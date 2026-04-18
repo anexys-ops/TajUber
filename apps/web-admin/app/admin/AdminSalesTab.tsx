@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { tajClientLog } from "../../lib/clientLog";
 
 type Props = {
   apiBase: string;
@@ -45,6 +46,7 @@ export function AdminSalesTab({ apiBase, token, tenantSlug }: Props) {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
+    tajClientLog("sales", "load report", { from, to });
     setBusy(true);
     setMessage(null);
     try {
@@ -58,12 +60,17 @@ export function AdminSalesTab({ apiBase, token, tenantSlug }: Props) {
         },
       });
       if (!res.ok) {
-        setMessage(await res.text());
+        const t = await res.text();
+        tajClientLog("sales", "load fail", res.status, t);
+        setMessage(t);
         setReport(null);
         return;
       }
-      setReport((await res.json()) as Report);
+      const r = (await res.json()) as Report;
+      tajClientLog("sales", "load ok", r.orderCount);
+      setReport(r);
     } catch (e) {
+      tajClientLog("sales", "load error", e);
       setMessage(String(e));
       setReport(null);
     } finally {

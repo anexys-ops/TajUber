@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { tajClientLog } from "../../lib/clientLog";
 
 type Props = {
   apiBase: string;
@@ -46,11 +47,13 @@ function tenantAdminFromJwt(jwt: string): boolean {
 export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
   const [data, setData] = useState<RestaurantDto | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [listLoading, setListLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const canEdit = tenantAdminFromJwt(token);
 
   const load = useCallback(async () => {
-    setBusy(true);
+    tajClientLog("restaurant", "load start", { tenantSlug });
+    setListLoading(true);
     setMessage(null);
     try {
       const res = await fetch(`${apiBase}/admin/restaurant`, {
@@ -60,14 +63,18 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
         },
       });
       if (!res.ok) {
-        setMessage(await res.text());
+        const t = await res.text();
+        tajClientLog("restaurant", "load fail", res.status, t);
+        setMessage(t);
         return;
       }
       setData((await res.json()) as RestaurantDto);
+      tajClientLog("restaurant", "load ok");
     } catch (e) {
+      tajClientLog("restaurant", "load error", e);
       setMessage(String(e));
     } finally {
-      setBusy(false);
+      setListLoading(false);
     }
   }, [apiBase, token, tenantSlug]);
 
@@ -79,14 +86,14 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
     if (!canEdit) {
       return;
     }
-    setBusy(true);
+    tajClientLog("restaurant", "save", Object.keys(patch));
+    setSaving(true);
     setMessage(null);
     try {
       const body = Object.fromEntries(
         Object.entries(patch).filter(([, v]) => v !== undefined),
       );
       if (Object.keys(body).length === 0) {
-        setBusy(false);
         return;
       }
 
@@ -100,23 +107,34 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        setMessage(await res.text());
+        const t = await res.text();
+        tajClientLog("restaurant", "save fail", res.status, t);
+        setMessage(t);
         return;
       }
       setMessage("Enregistré.");
-      await load();
+      tajClientLog("restaurant", "save ok");
     } catch (e) {
+      tajClientLog("restaurant", "save error", e);
       setMessage(String(e));
     } finally {
-      setBusy(false);
+      setSaving(false);
     }
+    await load();
   }
 
   if (!data) {
     return (
       <section className="card">
-        <p className="muted">{busy ? "Chargement…" : message ?? "—"}</p>
-        <button type="button" className="btn ghost" onClick={() => void load()}>
+        <p className="muted">
+          {listLoading ? "Chargement…" : message ?? "—"}
+        </p>
+        <button
+          type="button"
+          className="btn ghost"
+          disabled={listLoading}
+          onClick={() => void load()}
+        >
           Réessayer
         </button>
       </section>
@@ -126,8 +144,21 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
   return (
     <section className="restaurant-settings">
       <div className="toolbar">
-        <h2>Restaurant &amp; livraison</h2>
-        <button type="button" className="btn ghost" onClick={() => void load()}>
+        <h2>
+          Restaurant &amp; livraison
+          {listLoading ? (
+            <span className="muted small"> — chargement…</span>
+          ) : null}
+          {saving ? (
+            <span className="muted small"> — enregistrement…</span>
+          ) : null}
+        </h2>
+        <button
+          type="button"
+          className="btn ghost"
+          disabled={listLoading}
+          onClick={() => void load()}
+        >
           Recharger
         </button>
       </div>
@@ -156,7 +187,7 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
         </p>
         <RestaurantForm
           data={data}
-          disabled={!canEdit || busy}
+          disabled={!canEdit || saving || listLoading}
           onSave={(p) => void save(p)}
         />
       </div>
@@ -172,7 +203,7 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
             <input
               type="checkbox"
               checked={data.paymentsStripeEnabled}
-              disabled={!canEdit || busy}
+              disabled={!canEdit || saving || listLoading}
               onChange={(e) =>
                 void save({ paymentsStripeEnabled: e.target.checked })
               }
@@ -183,7 +214,7 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
             <input
               type="checkbox"
               checked={data.paymentsCashEnabled}
-              disabled={!canEdit || busy}
+              disabled={!canEdit || saving || listLoading}
               onChange={(e) =>
                 void save({ paymentsCashEnabled: e.target.checked })
               }
@@ -194,7 +225,7 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
             <input
               type="checkbox"
               checked={data.paymentsQontoEnabled}
-              disabled={!canEdit || busy}
+              disabled={!canEdit || saving || listLoading}
               onChange={(e) =>
                 void save({ paymentsQontoEnabled: e.target.checked })
               }
@@ -205,7 +236,7 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
             <input
               type="checkbox"
               checked={data.paymentsMealVoucherEnabled}
-              disabled={!canEdit || busy}
+              disabled={!canEdit || saving || listLoading}
               onChange={(e) =>
                 void save({ paymentsMealVoucherEnabled: e.target.checked })
               }
@@ -228,7 +259,7 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
           <textarea
             rows={2}
             defaultValue={data.qontoPaymentNote ?? ""}
-            disabled={!canEdit || busy}
+            disabled={!canEdit || saving || listLoading}
             onBlur={(e) => {
               if (e.target.value !== (data.qontoPaymentNote ?? "")) {
                 void save({ qontoPaymentNote: e.target.value || null });
@@ -241,7 +272,7 @@ export function AdminRestaurantTab({ apiBase, token, tenantSlug }: Props) {
           <textarea
             rows={2}
             defaultValue={data.mealVoucherNote ?? ""}
-            disabled={!canEdit || busy}
+            disabled={!canEdit || saving || listLoading}
             onBlur={(e) => {
               if (e.target.value !== (data.mealVoucherNote ?? "")) {
                 void save({ mealVoucherNote: e.target.value || null });

@@ -10,6 +10,7 @@ import { TENANT_SLUG_HEADER } from "./tenant.constants";
 
 const SKIP_PREFIXES = [
   "/health",
+  "/api/health",
   "/stripe/webhook",
   "/platform",
   "/auth",

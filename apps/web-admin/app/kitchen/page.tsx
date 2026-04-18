@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { tajClientLog } from "../../lib/clientLog";
 
 const apiBase =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -46,7 +46,8 @@ export default function KitchenPage() {
   const [token, setToken] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [message, setMessage] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [listLoading, setListLoading] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
 
   useEffect(() => {
     const t = sessionStorage.getItem(TOKEN_KEY);
@@ -63,7 +64,8 @@ export default function KitchenPage() {
     if (!token) {
       return;
     }
-    setBusy(true);
+    tajClientLog("kitchen", "load orders start");
+    setListLoading(true);
     setMessage(null);
     try {
       const res = await fetch(`${apiBase}/kitchen/orders`, {
@@ -73,14 +75,19 @@ export default function KitchenPage() {
         },
       });
       if (!res.ok) {
-        setMessage(await res.text());
+        const t = await res.text();
+        tajClientLog("kitchen", "load orders fail", res.status, t);
+        setMessage(t);
         return;
       }
-      setOrders((await res.json()) as Order[]);
+      const list = (await res.json()) as Order[];
+      tajClientLog("kitchen", "load orders ok", list.length);
+      setOrders(list);
     } catch (e) {
+      tajClientLog("kitchen", "load orders error", e);
       setMessage(String(e));
     } finally {
-      setBusy(false);
+      setListLoading(false);
     }
   }, [token, tenantSlug]);
 
@@ -95,7 +102,8 @@ export default function KitchenPage() {
       if (!token) {
         return;
       }
-      setBusy(true);
+      tajClientLog("kitchen", "setStatus", orderId, status);
+      setActionBusy(true);
       setMessage(null);
       try {
         const res = await fetch(`${apiBase}/orders/${orderId}/status`, {
@@ -108,21 +116,26 @@ export default function KitchenPage() {
           body: JSON.stringify({ status }),
         });
         if (!res.ok) {
-          setMessage(await res.text());
+          const t = await res.text();
+          tajClientLog("kitchen", "setStatus fail", res.status, t);
+          setMessage(t);
           return;
         }
+        tajClientLog("kitchen", "setStatus ok");
         await load();
       } catch (e) {
+        tajClientLog("kitchen", "setStatus error", e);
         setMessage(String(e));
       } finally {
-        setBusy(false);
+        setActionBusy(false);
       }
     },
     [token, tenantSlug, load],
   );
 
   const login = useCallback(async () => {
-    setBusy(true);
+    tajClientLog("kitchen", "login click");
+    setActionBusy(true);
     setMessage(null);
     try {
       const res = await fetch(`${apiBase}/auth/login`, {
@@ -132,6 +145,7 @@ export default function KitchenPage() {
       });
       const data = (await res.json()) as { access_token?: string; message?: string };
       if (!res.ok || !data.access_token) {
+        tajClientLog("kitchen", "login fail", res.status, data.message);
         setMessage(data.message ?? `Erreur ${res.status}`);
         return;
       }
@@ -139,10 +153,12 @@ export default function KitchenPage() {
       sessionStorage.setItem(SLUG_KEY, tenantSlug);
       setToken(data.access_token);
       setMessage("Connecté — ligne cuisine.");
+      tajClientLog("kitchen", "login ok");
     } catch (e) {
+      tajClientLog("kitchen", "login error", e);
       setMessage(String(e));
     } finally {
-      setBusy(false);
+      setActionBusy(false);
     }
   }, [email, password, tenantSlug]);
 
@@ -159,9 +175,9 @@ export default function KitchenPage() {
           <h1>Cuisine (KDS)</h1>
           <p className="muted">
             Commandes à préparer ·{" "}
-            <Link href="/">accueil</Link>
+            <a href="/">accueil</a>
             {" · "}
-            <Link href="/admin">back-office</Link>
+            <a href="/admin">back-office</a>
           </p>
         </div>
         {token && (
@@ -205,7 +221,7 @@ export default function KitchenPage() {
           <button
             type="button"
             className="btn primary"
-            disabled={busy}
+            disabled={actionBusy}
             onClick={() => void login()}
           >
             Se connecter
@@ -216,8 +232,14 @@ export default function KitchenPage() {
           <div className="toolbar">
             <p className="muted">
               {orders.length} commande(s) en file (payées / en prep / prêtes)
+              {listLoading ? " · chargement…" : ""}
             </p>
-            <button type="button" className="btn ghost" onClick={() => void load()}>
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={listLoading}
+              onClick={() => void load()}
+            >
               Rafraîchir
             </button>
           </div>
@@ -285,7 +307,7 @@ export default function KitchenPage() {
                     <button
                       type="button"
                       className="btn primary"
-                      disabled={busy}
+                      disabled={actionBusy}
                       onClick={() => void setStatus(o.id, "IN_KITCHEN")}
                     >
                       En préparation
@@ -295,7 +317,7 @@ export default function KitchenPage() {
                     <button
                       type="button"
                       className="btn primary"
-                      disabled={busy}
+                      disabled={actionBusy}
                       onClick={() => void setStatus(o.id, "READY")}
                     >
                       Prêt

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
+import { tajClientLog } from "../../lib/clientLog";
 
 type Props = {
   apiBase: string;
@@ -55,6 +55,9 @@ export function AdminMenuCrud({
 }: Props) {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  /** Chargement liste uniquement — ne pas désactiver les boutons CRUD pendant ce fetch. */
+  const [listLoading, setListLoading] = useState(false);
+  /** Création / édition / suppression en cours. */
   const [busy, setBusy] = useState(false);
   const [createForm, setCreateForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,21 +70,27 @@ export function AdminMenuCrud({
   };
 
   const load = useCallback(async () => {
-    setBusy(true);
+    tajClientLog("menu", "load menu-items start", { tenantSlug });
+    setListLoading(true);
     setMessage(null);
     try {
       const res = await fetch(`${apiBase}/admin/menu-items`, {
         headers: { Authorization: `Bearer ${token}`, "x-tenant-slug": tenantSlug },
       });
       if (!res.ok) {
-        setMessage(await res.text());
+        const t = await res.text();
+        tajClientLog("menu", "load menu-items fail", res.status, t);
+        setMessage(t);
         return;
       }
-      setItems((await res.json()) as MenuItem[]);
+      const list = (await res.json()) as MenuItem[];
+      tajClientLog("menu", "load menu-items ok", list.length);
+      setItems(list);
     } catch (e) {
+      tajClientLog("menu", "load menu-items error", e);
       setMessage(String(e));
     } finally {
-      setBusy(false);
+      setListLoading(false);
     }
   }, [apiBase, token, tenantSlug]);
 
@@ -90,6 +99,7 @@ export function AdminMenuCrud({
   }, [load]);
 
   async function createItem() {
+    tajClientLog("menu", "createItem click");
     if (!createForm.name.trim()) {
       setMessage("Le nom est obligatoire.");
       return;
@@ -116,12 +126,15 @@ export function AdminMenuCrud({
         }),
       });
       if (!res.ok) {
-        setMessage(await res.text());
+        const t = await res.text();
+        tajClientLog("menu", "createItem fail", res.status, t);
+        setMessage(t);
         return;
       }
       setCreateForm(emptyForm);
       await load();
       setMessage("Article créé.");
+      tajClientLog("menu", "createItem ok");
     } catch (e) {
       setMessage(String(e));
     } finally {
@@ -130,6 +143,7 @@ export function AdminMenuCrud({
   }
 
   function startEdit(it: MenuItem) {
+    tajClientLog("menu", "startEdit", it.id);
     setEditingId(it.id);
     setEditForm({
       category: it.category ?? "",
@@ -143,6 +157,7 @@ export function AdminMenuCrud({
   }
 
   async function saveEdit() {
+    tajClientLog("menu", "saveEdit", editingId);
     if (!editingId || !editForm.name.trim()) {
       return;
     }
@@ -182,6 +197,7 @@ export function AdminMenuCrud({
   }
 
   async function remove(id: string) {
+    tajClientLog("menu", "remove", id);
     if (!globalThis.confirm("Supprimer cet article ?")) {
       return;
     }
@@ -211,8 +227,18 @@ export function AdminMenuCrud({
   return (
     <section>
       <div className="toolbar">
-        <h2>Articles ({items.length})</h2>
-        <button type="button" className="btn ghost" onClick={() => void load()}>
+        <h2>
+          Articles ({items.length})
+          {listLoading ? (
+            <span className="muted small"> — chargement…</span>
+          ) : null}
+        </h2>
+        <button
+          type="button"
+          className="btn ghost"
+          disabled={listLoading}
+          onClick={() => void load()}
+        >
           Recharger
         </button>
       </div>
@@ -401,12 +427,19 @@ export function AdminMenuCrud({
               <>
                 <div className="admin-dish-img">
                   {it.photoUrl ? (
-                    <Image
+                    <img
                       src={it.photoUrl}
                       alt={it.name}
                       width={400}
                       height={220}
-                      style={{ objectFit: "cover", width: "100%", height: 160 }}
+                      loading="lazy"
+                      decoding="async"
+                      style={{
+                        objectFit: "cover",
+                        width: "100%",
+                        height: 160,
+                        display: "block",
+                      }}
                     />
                   ) : (
                     <div className="ph">Sans photo</div>

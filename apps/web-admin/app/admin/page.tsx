@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { tajClientLog } from "../../lib/clientLog";
 import { getApiBase, getWebPosUrl } from "../../lib/siteUrls";
 import { AdminDriversTab } from "./AdminDriversTab";
 import { AdminMenuCrud } from "./AdminMenuCrud";
@@ -75,6 +75,10 @@ export default function AdminConsolePage() {
   }, []);
 
   const login = useCallback(async () => {
+    tajClientLog("admin", "login click", {
+      platformOnly,
+      tenantSlug: platformOnly ? "(none)" : tenantSlug,
+    });
     setBusy(true);
     setMessage(null);
     try {
@@ -96,6 +100,7 @@ export default function AdminConsolePage() {
         scope?: string;
       };
       if (!res.ok || !data.access_token) {
+        tajClientLog("admin", "login fail", res.status, data.message);
         setMessage(data.message ?? `Erreur ${res.status}`);
         return;
       }
@@ -110,7 +115,9 @@ export default function AdminConsolePage() {
         setTab("menu");
       }
       setMessage("Connecté.");
+      tajClientLog("admin", "login ok", data.scope ?? "tenant");
     } catch (e) {
+      tajClientLog("admin", "login error", e);
       setMessage(String(e));
     } finally {
       setBusy(false);
@@ -118,6 +125,7 @@ export default function AdminConsolePage() {
   }, [email, password, tenantSlug, platformOnly]);
 
   const logout = useCallback(() => {
+    tajClientLog("admin", "logout");
     sessionStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setSessionScope("none");
@@ -128,6 +136,7 @@ export default function AdminConsolePage() {
     if (!token) {
       return;
     }
+    tajClientLog("admin", "loadTenants");
     setBusy(true);
     setMessage(null);
     try {
@@ -170,9 +179,9 @@ export default function AdminConsolePage() {
           <h1>Console restaurant</h1>
           <p className="muted">
             Menu, fiche restaurant, stats ·{" "}
-            <Link href="/">accueil</Link>
+            <a href="/">accueil</a>
             {" · "}
-            <Link href="/kitchen">cuisine</Link>
+            <a href="/kitchen">cuisine</a>
             {" · "}
             <a href={posUrl}>commandes (caisse)</a>
           </p>
@@ -243,14 +252,20 @@ export default function AdminConsolePage() {
                 <button
                   type="button"
                   className={tab === "menu" ? "active" : ""}
-                  onClick={() => setTab("menu")}
+                  onClick={() => {
+                    tajClientLog("admin", "tab", "menu");
+                    setTab("menu");
+                  }}
                 >
                   Menu & photos
                 </button>
                 <button
                   type="button"
                   className={tab === "promos" ? "active" : ""}
-                  onClick={() => setTab("promos")}
+                  onClick={() => {
+                    tajClientLog("admin", "tab", "promos");
+                    setTab("promos");
+                  }}
                 >
                   Promotions
                 </button>
@@ -258,7 +273,10 @@ export default function AdminConsolePage() {
                   <button
                     type="button"
                     className={tab === "drivers" ? "active" : ""}
-                    onClick={() => setTab("drivers")}
+                    onClick={() => {
+                      tajClientLog("admin", "tab", "drivers");
+                      setTab("drivers");
+                    }}
                   >
                     Livreurs
                   </button>
@@ -266,14 +284,20 @@ export default function AdminConsolePage() {
                 <button
                   type="button"
                   className={tab === "restaurant" ? "active" : ""}
-                  onClick={() => setTab("restaurant")}
+                  onClick={() => {
+                    tajClientLog("admin", "tab", "restaurant");
+                    setTab("restaurant");
+                  }}
                 >
                   Restaurant &amp; paiements
                 </button>
                 <button
                   type="button"
                   className={tab === "sales" ? "active" : ""}
-                  onClick={() => setTab("sales")}
+                  onClick={() => {
+                    tajClientLog("admin", "tab", "sales");
+                    setTab("sales");
+                  }}
                 >
                   Ventes
                 </button>
@@ -283,7 +307,10 @@ export default function AdminConsolePage() {
               <button
                 type="button"
                 className={tab === "platform" ? "active" : ""}
-                onClick={() => setTab("platform")}
+                onClick={() => {
+                  tajClientLog("admin", "tab", "platform");
+                  setTab("platform");
+                }}
               >
                 Restaurants
               </button>

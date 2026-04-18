@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { tajClientLog } from "../lib/clientLog";
 
 const apiBase =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -77,6 +77,7 @@ export default function PosTerminal() {
   }, []);
 
   const loadCatalog = useCallback(async () => {
+    tajClientLog("pos", "loadCatalog", { tenantSlug });
     setError(null);
     try {
       const h = { "x-tenant-slug": tenantSlug };
@@ -85,14 +86,18 @@ export default function PosTerminal() {
         fetch(`${apiBase}/catalog/promotions`, { headers: h }),
       ]);
       if (!mi.ok) {
+        tajClientLog("pos", "loadCatalog menu fail", mi.status);
         setError(`Menu : erreur ${mi.status} — l’API est-elle démarrée ?`);
         return;
       }
-      setItems((await mi.json()) as MenuItem[]);
+      const menu = (await mi.json()) as MenuItem[];
+      tajClientLog("pos", "loadCatalog ok", menu.length, "articles");
+      setItems(menu);
       if (pr.ok) {
         setPromos((await pr.json()) as Promotion[]);
       }
-    } catch {
+    } catch (e) {
+      tajClientLog("pos", "loadCatalog error", e);
       setError("API injoignable (vérifiez l’API et Postgres).");
     }
   }, [tenantSlug]);
@@ -125,10 +130,12 @@ export default function PosTerminal() {
   }, [cart, items]);
 
   function addToCart(id: string) {
+    tajClientLog("pos", "addToCart", id);
     setCart((c) => ({ ...c, [id]: (c[id] ?? 0) + 1 }));
   }
 
   function decFromCart(id: string) {
+    tajClientLog("pos", "decFromCart", id);
     setCart((c) => {
       const n = { ...c };
       const q = (n[id] ?? 0) - 1;
@@ -142,6 +149,7 @@ export default function PosTerminal() {
   }
 
   async function posLogin() {
+    tajClientLog("pos", "posLogin click", { tenantSlug });
     setBusy(true);
     setError(null);
     try {
@@ -156,13 +164,16 @@ export default function PosTerminal() {
       });
       const data = (await res.json()) as { access_token?: string; message?: string };
       if (!res.ok || !data.access_token) {
+        tajClientLog("pos", "posLogin fail", res.status, data.message);
         setError(data.message ?? `Login ${res.status}`);
         return;
       }
       sessionStorage.setItem(POS_TOKEN_KEY, data.access_token);
       sessionStorage.setItem(POS_SLUG_KEY, tenantSlug);
       setPosToken(data.access_token);
+      tajClientLog("pos", "posLogin ok");
     } catch (e) {
+      tajClientLog("pos", "posLogin error", e);
       setError(String(e));
     } finally {
       setBusy(false);
@@ -175,6 +186,7 @@ export default function PosTerminal() {
   }
 
   async function submitOrder() {
+    tajClientLog("pos", "submitOrder click");
     const lines = Object.entries(cart)
       .filter(([, q]) => q > 0)
       .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
@@ -222,9 +234,11 @@ export default function PosTerminal() {
         return;
       }
       const order = JSON.parse(text) as { id: string };
+      tajClientLog("pos", "submitOrder ok", order.id);
       setPendingOrderId(order.id);
       setCart({});
     } catch (e) {
+      tajClientLog("pos", "submitOrder error", e);
       setError(String(e));
     } finally {
       setBusy(false);
@@ -232,6 +246,7 @@ export default function PosTerminal() {
   }
 
   async function markPaid() {
+    tajClientLog("pos", "markPaid click", pendingOrderId, paymentMethod);
     if (!pendingOrderId || !posToken) {
       return;
     }
@@ -262,7 +277,9 @@ export default function PosTerminal() {
         return;
       }
       setPendingOrderId(null);
+      tajClientLog("pos", "markPaid ok");
     } catch (e) {
+      tajClientLog("pos", "markPaid error", e);
       setError(String(e));
     } finally {
       setBusy(false);
@@ -313,13 +330,19 @@ export default function PosTerminal() {
                   <article key={it.id} className="card dish">
                     <div className="dish-img">
                       {it.photoUrl ? (
-                        <Image
+                        <img
                           src={it.photoUrl}
                           alt={it.name}
                           width={320}
                           height={200}
-                          sizes="(max-width: 900px) 50vw, 25vw"
-                          style={{ objectFit: "cover", width: "100%", height: 140 }}
+                          loading="lazy"
+                          decoding="async"
+                          style={{
+                            objectFit: "cover",
+                            width: "100%",
+                            height: 140,
+                            display: "block",
+                          }}
                         />
                       ) : (
                         <div className="dish-placeholder">Photo</div>

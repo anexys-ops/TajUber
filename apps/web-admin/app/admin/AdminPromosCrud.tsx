@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { tajClientLog } from "../../lib/clientLog";
 
 type Props = {
   apiBase: string;
@@ -66,6 +67,7 @@ export function AdminPromosCrud({
 }: Props) {
   const [promos, setPromos] = useState<Promotion[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [listLoading, setListLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [createForm, setCreateForm] = useState(emptyCreate);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -78,21 +80,27 @@ export function AdminPromosCrud({
   };
 
   const load = useCallback(async () => {
-    setBusy(true);
+    tajClientLog("promos", "load start", { tenantSlug });
+    setListLoading(true);
     setMessage(null);
     try {
       const res = await fetch(`${apiBase}/admin/promotions`, {
         headers: { Authorization: `Bearer ${token}`, "x-tenant-slug": tenantSlug },
       });
       if (!res.ok) {
-        setMessage(await res.text());
+        const t = await res.text();
+        tajClientLog("promos", "load fail", res.status, t);
+        setMessage(t);
         return;
       }
-      setPromos((await res.json()) as Promotion[]);
+      const list = (await res.json()) as Promotion[];
+      tajClientLog("promos", "load ok", list.length);
+      setPromos(list);
     } catch (e) {
+      tajClientLog("promos", "load error", e);
       setMessage(String(e));
     } finally {
-      setBusy(false);
+      setListLoading(false);
     }
   }, [apiBase, token, tenantSlug]);
 
@@ -101,6 +109,7 @@ export function AdminPromosCrud({
   }, [load]);
 
   async function createPromo() {
+    tajClientLog("promos", "createPromo click");
     if (!createForm.title.trim()) {
       setMessage("Titre obligatoire.");
       return;
@@ -145,6 +154,7 @@ export function AdminPromosCrud({
   }
 
   function startEdit(p: Promotion) {
+    tajClientLog("promos", "startEdit", p.id);
     setEditingId(p.id);
     setEditForm({
       title: p.title,
@@ -160,6 +170,7 @@ export function AdminPromosCrud({
   }
 
   async function saveEdit() {
+    tajClientLog("promos", "saveEdit", editingId);
     if (!editingId || !editForm.title.trim()) {
       return;
     }
@@ -203,6 +214,7 @@ export function AdminPromosCrud({
   }
 
   async function remove(id: string) {
+    tajClientLog("promos", "remove", id);
     if (!globalThis.confirm("Supprimer cette promotion ?")) {
       return;
     }
@@ -232,8 +244,18 @@ export function AdminPromosCrud({
   return (
     <section>
       <div className="toolbar">
-        <h2>Promotions ({promos.length})</h2>
-        <button type="button" className="btn ghost" onClick={() => void load()}>
+        <h2>
+          Promotions ({promos.length})
+          {listLoading ? (
+            <span className="muted small"> — chargement…</span>
+          ) : null}
+        </h2>
+        <button
+          type="button"
+          className="btn ghost"
+          disabled={listLoading}
+          onClick={() => void load()}
+        >
           Recharger
         </button>
       </div>

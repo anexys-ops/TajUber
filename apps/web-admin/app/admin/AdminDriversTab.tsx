@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { tajClientLog } from "../../lib/clientLog";
 
 type Props = {
   apiBase: string;
@@ -19,6 +20,7 @@ type DriverRow = {
 export function AdminDriversTab({ apiBase, token, tenantSlug }: Props) {
   const [drivers, setDrivers] = useState<DriverRow[]>([]);
   const [message, setMessage] = useState<string | null>(null);
+  const [listLoading, setListLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [createEmail, setCreateEmail] = useState("");
   const [createPassword, setCreatePassword] = useState("");
@@ -34,21 +36,27 @@ export function AdminDriversTab({ apiBase, token, tenantSlug }: Props) {
   };
 
   const load = useCallback(async () => {
-    setBusy(true);
+    tajClientLog("drivers", "load start", { tenantSlug });
+    setListLoading(true);
     setMessage(null);
     try {
       const res = await fetch(`${apiBase}/admin/drivers`, {
         headers: { Authorization: `Bearer ${token}`, "x-tenant-slug": tenantSlug },
       });
       if (!res.ok) {
-        setMessage(await res.text());
+        const t = await res.text();
+        tajClientLog("drivers", "load fail", res.status, t);
+        setMessage(t);
         return;
       }
-      setDrivers((await res.json()) as DriverRow[]);
+      const list = (await res.json()) as DriverRow[];
+      tajClientLog("drivers", "load ok", list.length);
+      setDrivers(list);
     } catch (e) {
+      tajClientLog("drivers", "load error", e);
       setMessage(String(e));
     } finally {
-      setBusy(false);
+      setListLoading(false);
     }
   }, [apiBase, token, tenantSlug]);
 
@@ -57,6 +65,7 @@ export function AdminDriversTab({ apiBase, token, tenantSlug }: Props) {
   }, [load]);
 
   async function createDriver() {
+    tajClientLog("drivers", "createDriver click");
     if (!createEmail.trim() || createPassword.length < 8) {
       setMessage("Email et mot de passe (8 caractères min.) requis.");
       return;
@@ -91,12 +100,14 @@ export function AdminDriversTab({ apiBase, token, tenantSlug }: Props) {
   }
 
   function startEdit(d: DriverRow) {
+    tajClientLog("drivers", "startEdit", d.membershipId);
     setEditingId(d.membershipId);
     setEditName(d.displayName ?? "");
     setEditPassword("");
   }
 
   async function saveEdit() {
+    tajClientLog("drivers", "saveEdit", editingId);
     if (!editingId) {
       return;
     }
@@ -142,6 +153,7 @@ export function AdminDriversTab({ apiBase, token, tenantSlug }: Props) {
   }
 
   async function remove(membershipId: string) {
+    tajClientLog("drivers", "remove", membershipId);
     if (!globalThis.confirm("Retirer ce livreur du restaurant ? Il ne pourra plus se connecter pour ce slug.")) {
       return;
     }
@@ -171,8 +183,18 @@ export function AdminDriversTab({ apiBase, token, tenantSlug }: Props) {
   return (
     <section>
       <div className="toolbar">
-        <h2>Livreurs ({drivers.length})</h2>
-        <button type="button" className="btn ghost" onClick={() => void load()}>
+        <h2>
+          Livreurs ({drivers.length})
+          {listLoading ? (
+            <span className="muted small"> — chargement…</span>
+          ) : null}
+        </h2>
+        <button
+          type="button"
+          className="btn ghost"
+          disabled={listLoading}
+          onClick={() => void load()}
+        >
           Recharger
         </button>
       </div>

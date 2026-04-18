@@ -257,6 +257,19 @@ code {
   border: 1px solid #2d3a4d;
 }
 
+button.btn:disabled,
+button:disabled.btn {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .tabs {
   display: flex;
   flex-wrap: wrap;
