@@ -18,6 +18,7 @@ export default (): ExpoConfig => {
     newArchEnabled: true,
     ios: {
       supportsTablet: false,
+      usesNonExemptEncryption: false,
       bundleIdentifier:
         process.env.IOS_BUNDLE_ID ?? "com.tajplatform.driver",
     },
