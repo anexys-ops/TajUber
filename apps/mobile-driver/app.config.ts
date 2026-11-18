@@ -31,6 +31,9 @@ export default (): ExpoConfig => {
       tenantSlug,
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001",
       appRole: "driver",
+      eas: {
+        projectId: "8d775fa6-9db7-4561-b515-b16f474a76c0",
+      },
     },
   };
 };

@@ -30,6 +30,9 @@ export default (): ExpoConfig => {
     extra: {
       tenantSlug,
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3001",
+      eas: {
+        projectId: "a224ddcc-ef6c-43c2-8f03-993f8883a689",
+      },
     },
   };
 };
